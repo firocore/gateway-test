@@ -68,10 +68,6 @@ class MyGateway:
         if op_code == 1:
             self.heartbeat()
 
-        # reconnect
-        elif op_code == 7:
-            self.reconnect()
-
         # restart
         elif op_code == 9:
             self.reconnect()
@@ -80,7 +76,7 @@ class MyGateway:
         if op_code == 10:
             self.heart = False
             self.heartbeat_interval = message['d']['heartbeat_interval'] / 1000
-            print('init heartbeat, interval =', str(self.heartbeat_interval))
+            print('init heartbeat, interval =', self.heartbeat_interval)
             threading.Thread(target=self.heartbeat_old, daemon=True).start()
 
         elif op_code == 11:
@@ -94,44 +90,24 @@ class MyGateway:
                 self.ready = True
 
                 self.session = msg_data['session_id']
-                print('Gateway session:', str(self.session))
+                print('Gateway session:', self.session)
 
             for handler in self.handlers:
                 if msg_code in handler["events"]:
                     handler["callback"](message)
                 elif "ALL" in handler["events"]:
                     handler["callback"](message)
-        
+    
     def on_error(self, ws, error):
         print("ERROR", str(error))
-    
+
     def on_close(self, ws, code, _):
         print('socket closed')
         self.reconnect()
 
-
     def on_open(self, message):
-        if self.session is None:
-            self.identify()
-            print("Discord gateway ready.")
-        else:
-            reconnect = {
-                "op": 6,
-                "d": {
-                "token": self.token,
-                "session_id": self.session,
-                "seq": self.seq
-                }
-            }
-            
-            # self.identify()
-            self.send_json(reconnect)
-            
-            
-            print("Reconnecting...")
-            
-            
-        
+        self.identify()
+        print("Discord gateway ready.")
 
     def send_json(self, data: dict) -> None:
         try:
@@ -180,12 +156,6 @@ class MyGateway:
         self.send_json(heart)
 
     def reconnect(self):
-        """
-        Должен быть отправлен при получении Opcode 7
-        7 Reconnect, Receive, You should attempt to reconnect and resume immediately.
-        """
-        self.heart = False
-
         self.ws.close()
         self.ws = websocket.WebSocketApp(
             "wss://gateway.discord.gg/?v=9&encoding=json",
@@ -197,7 +167,6 @@ class MyGateway:
         self.ws.on_open = self.on_open
         print('SEND GATEWAY RECONNECT')
         self.ws.run_forever()
-
         
     def listener(self, events: Union[str, list]) -> dict:
         if isinstance(events, str):
