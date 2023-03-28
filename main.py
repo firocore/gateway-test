@@ -37,6 +37,8 @@ class GatewayTest:
         self.session = event['d']['session_id']
         print('Gateway session:', self.session)
 
+        self.user.send_message(message="Hello world!")
+
     def test_run(self):
         self.gateway.ws.run_forever()
 
